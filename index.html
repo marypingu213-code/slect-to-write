@@ -44,12 +44,12 @@
             }
             #print-area {
                 display: block !important;
-                writing-mode: vertical-rl; /* 直排書寫 */
+                writing-mode: vertical-rl; /* 直排書寫，由右至左 */
                 text-orientation: mixed;
                 font-family: 'Noto Serif TC', serif;
                 font-size: 24pt;
                 line-height: 2.2;
-                letter-spacing: 0.2em;
+                letter-spacing: 0.15em;
                 padding: 1.5cm;
                 width: 100vw;
                 height: 100vh;
@@ -58,23 +58,9 @@
                 white-space: pre-wrap;
             }
             @page {
-                size: A4 landscape; /* 橫向紙張 */
+                size: A4 landscape; /* 強制橫向紙張 */
                 margin: 0;
             }
-        }
-
-        .loading-spin {
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        /* AI 建議彈窗樣式 */
-        .ai-modal {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(8px);
         }
     </style>
 </head>
@@ -96,6 +82,7 @@
                 <div class="flex flex-wrap justify-center gap-2 mb-2">
                     <span class="text-slate-400 font-bold self-center mr-2">題目路徑：</span>
                     <div id="topic-selector" class="inline-flex bg-white p-1 rounded-2xl shadow-sm border border-slate-100">
+                        <!-- JS 會在此生成題目切換按鈕 -->
                     </div>
                 </div>
             </header>
@@ -112,46 +99,17 @@
 
             <!-- 主要內容區塊 -->
             <div id="main-card" class="bg-white rounded-[2.5rem] shadow-2xl shadow-purple-200/30 p-6 md:p-10 border border-white min-h-[500px] flex flex-col transition-all duration-500">
+                <!-- 由 JS 注入內容 -->
             </div>
 
             <footer class="mt-12 text-center text-slate-400 text-sm font-medium border-t border-slate-200 pt-8 no-print">
-                <p>© 2024 互動式教育工具集 | 點亮每個孩子的創作光芒</p>
+                <p>© 2024 互動式教育工具集 | 讓每個孩子都能大聲說出好作文</p>
             </footer>
         </div>
     </div>
 
-    <!-- AI 調整彈窗 -->
-    <div id="ai-modal" class="hidden fixed inset-0 z-50 ai-modal flex items-center justify-center p-4 no-print">
-        <div class="bg-white rounded-[2.5rem] shadow-2xl max-w-4xl w-full p-8 fade-in">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 bg-purple-100 rounded-xl text-purple-600">
-                        <i data-lucide="wand-2"></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-slate-800">老師幫你調整好了！你比較喜歡哪一個？</h3>
-                </div>
-                <button onclick="closeAI()" class="text-slate-400 hover:text-slate-600">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div class="flex flex-col border-2 border-indigo-50 bg-indigo-50/20 rounded-3xl p-6 hover:border-indigo-300 transition-all cursor-pointer" onclick="applyAI('v1')">
-                    <span class="text-indigo-600 font-bold text-sm mb-2 block">版本一：溫馨抒情風</span>
-                    <div id="ai-v1" class="text-slate-700 font-serif leading-relaxed h-48 overflow-y-auto pr-2">正在處理中...</div>
-                    <div class="mt-4 text-center py-2 bg-indigo-600 text-white rounded-xl font-bold">選擇這個版本</div>
-                </div>
-                <div class="flex flex-col border-2 border-purple-50 bg-purple-50/20 rounded-3xl p-6 hover:border-purple-300 transition-all cursor-pointer" onclick="applyAI('v2')">
-                    <span class="text-purple-600 font-bold text-sm mb-2 block">版本二：童趣生動風</span>
-                    <div id="ai-v2" class="text-slate-700 font-serif leading-relaxed h-48 overflow-y-auto pr-2">正在處理中...</div>
-                    <div class="mt-4 text-center py-2 bg-purple-600 text-white rounded-xl font-bold">選擇這個版本</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script>
-        const apiKey = ""; // API Key 保持為空字串，環境將自動處理
-        
+        // --- 題目資料庫 ---
         const topicPaths = {
             timemachine: {
                 name: "如果我有一臺時光機",
@@ -168,29 +126,32 @@
                     { title: "第二步：為什麼想去那個時候？", key: "q2", items: [
                         { id: "感到好奇", label: "滿足好奇心", icon: "🤔", desc: "世界有好多我不知道的秘密" },
                         { id: "彌補遺憾", label: "改寫錯誤", icon: "🩹", desc: "想把做錯的事情重新做對" },
-                        { id: "非常想念某人", label: "想見見某人", icon: "🫂", desc: "想再見到已經不在身邊的人" },
+                        { id: "想見見某人", label: "非常想念", icon: "🫂", desc: "想再見到已經不在身邊的人" },
                         { id: "尋找消失的寶藏", label: "尋找寶藏", icon: "💎", desc: "發掘埋藏在地下的古代秘密" },
                         { id: "了解歷史的真相", label: "歷史真相", icon: "📜", desc: "親身體驗書本上記載的事情" },
-                        { id: "單純愛冒險", label: "想要冒險", icon: "🗺️", desc: "想體驗不一樣的生活樂趣" }
+                        { id: "想要冒險", label: "單純愛冒險", icon: "🗺️", desc: "想體驗不一樣的生活樂趣" }
                     ]},
                     { title: "第三步：在那裡你想做什麼事？", key: "q3", items: [
                         { id: "拍下珍貴照片", label: "紀錄瞬間", icon: "📸", desc: "把最難得的畫面拍下來留念" },
                         { id: "提醒過去的我", label: "提點自己", icon: "📢", desc: "告訴過去的我要更努力、更勇敢" },
                         { id: "送出一份禮物", label: "傳遞溫暖", icon: "🎁", desc: "給過去或未來的親人一個驚喜" },
                         { id: "阻止爭吵發生", label: "守護和平", icon: "🤝", desc: "主動道歉讓大家重新和好" },
-                        { id: "帶回未來的科技", label: "帶回新科技", icon: "💻", desc: "用未來的智慧解決現在的問題" },
+                        { id: "帶回新科技", label: "帶回未來科技", icon: "💻", desc: "用未來的智慧解決現在的問題" },
                         { id: "阻止自然災害", label: "拯救地球", icon: "🌪️", desc: "在災害發生前預先發出警告" }
                     ]},
                     { title: "第四步：回到現在，我可以怎麼做？", key: "q4", items: [
                         { id: "珍惜當下時間", label: "珍惜時間", icon: "⌛", desc: "不浪費每一分每一秒" },
                         { id: "對身邊人更好", label: "愛身邊的人", icon: "💖", desc: "現在就去擁抱爸爸媽媽" },
                         { id: "記錄美好生活", label: "寫下日記", icon: "📓", desc: "讓現在的每一天都值得回憶" },
-                        { id: "認真規劃時間", label: "規劃未來", icon: "📅", desc: "把每一天都安排得充實有意義" },
-                        { id: "學習歷史知識", label: "多讀歷史", icon: "📖", desc: "從歷史中學習人生的道理" },
-                        { id: "勇敢的面對現在", label: "保持勇敢", icon: "💪", desc: "就算沒有時光機也能解決困難" }
+                        { id: "規劃未來", label: "認真規劃時間", icon: "📅", desc: "把每一天都安排得充實有意義" },
+                        { id: "多讀歷史", label: "學習歷史知識", icon: "📖", desc: "從歷史中學習人生的道理" },
+                        { id: "保持勇敢", label: "勇敢面對現在", icon: "💪", desc: "就算沒有時光機也能解決困難" }
                     ]}
                 ],
-                templates: [ (s) => `如果我有一臺時光機，我最想去的時間點是「${s.q1}」。\n\n我之所以想去那裡，是因為我對那段時光「${s.q2}」。在我的想像中，那是一個非常神奇的地方。\n\n抵達那裡後，我最想做的事情就是「${s.q3}」。對我來說，這不只是好玩，更是為了留下一些美好的回憶。\n\n雖然現實生活中並沒有真正的時光機，但我明白，每一分每一秒過去了就不能重來。所以，從現在開始，我決定要「${s.q4}」。我想，只要能珍惜現在，每一天都可以像冒險一樣精采！` ]
+                templates: [
+                    (s) => `如果我有一臺時光機，我最想去的時間點是「${s.q1}」。\n\n我之所以想去那裡，是因為我對那段時光「${s.q2}」。在我的想像中，那是一個非常神奇的地方，如果真的能抵達，一定會是我人生中最難忘的一場旅行。\n\n抵達那裡後，我最想做的事情就是「${s.q3}」。對我來說，這不只是好玩，更是為了留下一些美好的回憶，或者是幫助那些需要的人，讓自己像個真正的時空冒險家。\n\n雖然現實生活中並沒有真正的時光機，但我明白，每一分每一秒過去了就不能重來。所以，從現在開始，我決定要「${s.q4}」。我想，只要能珍惜現在，每一天都可以像冒險一樣精采！`,
+                    (s) => `假如我有一台神奇的時光機，我會立刻調整時間，飛往「${s.q1}」。\n\n那是一個令我「${s.q2}」的時刻。如果我能真的到達現場，我最想做的一件事就是「${s.q3}」，那一定非常有意義，能為我的生活增添許多美麗色彩。\n\n即使現在還沒有時光機，我也學會了時間的重要性。以後我要「${s.q4}」，把現在的每一刻都過得很有價值，努力朝著目標前進。`
+                ]
             },
             superpower: {
                 name: "我最想擁有的超能力",
@@ -213,35 +174,39 @@
                         { id: "探索秘境", label: "探索秘密基地", icon: "🏝️", desc: "去沒人去過的遠方冒險" }
                     ]},
                     { title: "第三步：你想用它做什麼好事？", key: "q3", items: [
-                        { id: "拯救困難", label: "拯救受困者", icon: "🚑", desc: "在危急時刻勇敢保護大家" },
+                        { id: "拯救受困者", label: "拯救困難", icon: "🚑", desc: "在危急時刻勇敢保護大家" },
                         { id: "清理地球", label: "清理垃圾", icon: "♻️", desc: "讓森林和海洋變漂亮" },
                         { id: "溫暖陪伴", label: "陪伴孤單老人", icon: "👴", desc: "讓孤單的人感受到快樂" },
-                        { id: "尋找失物", label: "幫人找回失物", icon: "🔍", desc: "幫同學找回弄丟的寶貝" },
-                        { id: "修復大師", label: "修復壞掉的物品", icon: "🛠️", desc: "讓大家心愛的東西都能恢復原狀" },
+                        { id: "幫人找回失物", label: "尋找失物", icon: "🔍", desc: "幫同學找回弄丟的寶貝" },
+                        { id: "修復大師", label: "修復物品", icon: "🛠️", desc: "讓大家心愛的東西都能恢復原狀" },
                         { id: "綠色魔法", label: "荒地變森林", icon: "🌲", desc: "用能力在沙漠種出滿滿的樹木" }
                     ]},
                     { title: "第四步：現在的我如何努力？", key: "q4", items: [
-                        { id: "鍛鍊身體", label: "鍛鍊強壯體魄", icon: "🏃", desc: "讓自己變得健康有力" },
-                        { id: "充實知識", label: "充實知識大腦", icon: "📚", desc: "讀書學習，用智慧解決難題" },
-                        { id: "熱心助人", label: "學習助人為快樂", icon: "❤️", desc: "就算沒法力也能愛人" },
-                        { id: "認真學習", label: "認真做好每件事", icon: "✍️", desc: "練習專注，把每一件事都做好" },
-                        { id: "練習表達", label: "練習勇敢表達", icon: "🗣️", desc: "把心裡的好想法勇敢說出來" },
-                        { id: "發揮所長", label: "發揮自己的特長", icon: "🌟", desc: "找出最厲害的地方並好好發揮" }
+                        { id: "鍛鍊身體", label: "鍛鍊體魄", icon: "🏃", desc: "讓自己變得健康有力" },
+                        { id: "充實知識", label: "充實大腦", icon: "📚", desc: "讀書學習，用智慧解決難題" },
+                        { id: "熱心助人", label: "學習助人", icon: "❤️", desc: "就算沒法力也能愛人" },
+                        { id: "認真學習", label: "做好每件事", icon: "✍️", desc: "練習專注，把每一件事都做好" },
+                        { id: "練習表達", label: "勇敢表達", icon: "🗣️", desc: "把心裡的好想法勇敢說出來" },
+                        { id: "發揮所長", label: "發揮特長", icon: "🌟", desc: "找出最厲害的地方並好好發揮" }
                     ]}
                 ],
-                templates: [ (s) => `我最想擁有的超能力是「${s.q1}」。\n\n如果我擁有這個能力，那該有多好！因為在生活中，我常常覺得「${s.q2}」這件事讓我很困擾，如果有超能力，我就可以輕鬆解決問題。\n\n我不僅想讓自己方便，更想用這份力量去幫助別人。例如，我想嘗試「${s.q3}」，看見別人臉上的笑容，我也會覺得非常有成就感。\n\n雖然我現在還沒有法力，但我相信，只要我願意「${s.q4}」，我也能成為一個優秀的人。我想，一顆願意助人的心，就是最強大的超能力！` ]
+                templates: [
+                    (s) => `我最想擁有的超能力是「${s.q1}」。\n\n如果我擁有這個能力，那該有多好！因為在生活中，我常常覺得「${s.q2}」這件事讓我很困擾，如果有超能力，我就可以輕鬆解決問題。\n\n我不僅想讓自己方便，更想用這份力量去幫助別人。例如，我想嘗試「${s.q3}」，看見別人臉上的笑容，我也會覺得非常有成就感。\n\n雖然我現在還沒有法力，但我相信，只要我願意「${s.q4}」，我也能成為一個優秀的人。我想，一顆願意助人的心，就是最強大的超能力！`,
+                    (s) => `我夢想著有一天能擁有「${s.q1}」的超能力。因為我一直被「${s.q2}」所困擾，所以這股力量對我來說非常重要，能讓生活變得多采多姿。\n\n當我有這份能力時，我會去「${s.q3}」，幫助需要的人，這讓我感到非常有意義。即使現在還沒法術，我也會練習「${s.q4}」，讓自己變得更棒！`
+                ]
             }
         };
 
+        // --- 狀態管理 ---
         let currentTopic = 'timemachine';
         let currentStep = 0;
+        let currentTemplateIndex = 0;
         let selections = { q1: '', q2: '', q3: '', q4: '' };
         let isRecording = false;
-        let isRefining = false;
         let recognition = null;
-        let textBeforeRecording = '';
-        let aiResults = { v1: '', v2: '' };
+        let textBeforeRecording = ''; // 記錄錄音開始前的文字
 
+        // 語音辨識初始化
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
@@ -255,9 +220,10 @@
                     if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
                 }
                 const output = document.getElementById('my-speech-output');
-                if (output && finalTranscript) output.value = textBeforeRecording + finalTranscript;
+                if (output && finalTranscript) {
+                    output.value = textBeforeRecording + finalTranscript;
+                }
             };
-            recognition.onend = () => { if(isRecording) recognition.start(); };
         }
 
         function initIcons() { lucide.createIcons(); }
@@ -309,29 +275,32 @@
                                 <div><h2 class="text-2xl font-bold text-slate-800">恭喜！寫作藍圖已完成</h2><p class="text-slate-400 text-sm">點選左側參考，並在右側練習口說或打字吧！</p></div>
                             </div>
                             <div class="flex gap-2">
-                                <button onclick="printResult()" class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-xl font-bold"><i data-lucide="printer"></i> 列印文章</button>
+                                <button onclick="printResult()" class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-xl font-bold shadow-md shadow-green-100"><i data-lucide="printer"></i> 列印作品</button>
                                 <button onclick="resetApp()" class="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-purple-600 font-bold group"><i data-lucide="refresh-cw" class="group-hover:rotate-180 transition-transform"></i> 重新開始</button>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow">
+                            <!-- 左側：建議範本 -->
                             <div class="flex flex-col no-print">
-                                <div class="flex items-center mb-3 px-2 text-indigo-600 font-bold gap-2"><i data-lucide="file-text"></i> 建議範本</div>
-                                <div class="bg-indigo-50/50 border-2 border-indigo-100 rounded-[2rem] p-6 shadow-inner flex-grow"><pre class="whitespace-pre-wrap font-serif text-lg leading-relaxed text-slate-700">${path.templates[0](selections)}</pre></div>
+                                <div class="flex items-center justify-between mb-3 px-2 text-indigo-600 font-bold gap-2">
+                                    <span class="flex items-center gap-2"><i data-lucide="file-text"></i> 建議範本</span>
+                                    <button onclick="shuffleTemplate()" class="text-xs bg-indigo-100 px-2 py-1 rounded-full hover:bg-indigo-200 transition-all"><i data-lucide="shuffle" class="inline w-3 h-3"></i> 重組風格</button>
+                                </div>
+                                <div class="bg-indigo-50/50 border-2 border-indigo-100 rounded-[2rem] p-6 shadow-inner flex-grow"><pre class="whitespace-pre-wrap font-serif text-lg leading-relaxed text-slate-700">${path.templates[currentTemplateIndex](selections)}</pre></div>
                             </div>
+                            <!-- 右側：口說練習 -->
                             <div class="flex flex-col no-print">
                                 <div class="flex items-center justify-between mb-3 px-2 text-purple-600 font-bold gap-2">
                                     <span class="flex items-center gap-2"><i data-lucide="user"></i> 我的口說練習</span>
                                     <div id="recording-status" class="hidden text-xs text-red-500 animate-pulse font-bold">● 錄音中...</div>
                                 </div>
                                 <div class="bg-purple-50/50 border-2 border-purple-100 rounded-[2rem] p-6 shadow-inner flex flex-col flex-grow relative">
-                                    <textarea id="my-speech-output" placeholder="點選下方麥克風，對著範本說說看你的作文吧！" class="w-full h-full bg-transparent border-none focus:ring-0 text-lg font-serif leading-relaxed text-slate-700 resize-none"></textarea>
-                                    <div class="absolute bottom-4 right-4 flex gap-2">
-                                        <button id="refine-btn" onclick="refineText()" class="flex items-center gap-2 px-4 py-3 bg-white border-2 border-purple-200 text-purple-600 rounded-2xl font-bold shadow-md hover:bg-purple-50">
-                                            <i data-lucide="wand-2" id="refine-icon"></i> <span id="refine-text">我來幫你調整</span>
-                                        </button>
-                                        <button id="mic-btn" onclick="toggleRecording()" class="w-16 h-16 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700"><i data-lucide="mic" id="mic-icon"></i></button>
+                                    <textarea id="my-speech-output" placeholder="點選右下角麥克風，對著左側範本說說看你的作文吧！" class="w-full h-full bg-transparent border-none focus:ring-0 text-lg font-serif leading-relaxed text-slate-700 resize-none"></textarea>
+                                    <div class="absolute bottom-4 right-4">
+                                        <button id="mic-btn" onclick="toggleRecording()" class="w-16 h-16 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700 active:scale-95 transition-all"><i data-lucide="mic" id="mic-icon"></i></button>
                                     </div>
                                 </div>
+                                <div class="mt-4 text-center"><p class="text-xs text-slate-400 italic">錄音功能建議使用 Chrome 瀏覽器。點一下開始，再點一下結束。</p></div>
                             </div>
                         </div>
                     </div>`;
@@ -361,8 +330,13 @@
 
         function prevStep() { if (currentStep > 0) { currentStep--; render(); } }
 
+        function shuffleTemplate() {
+            currentTemplateIndex = (currentTemplateIndex + 1) % topicPaths[currentTopic].templates.length;
+            render();
+        }
+
         function toggleRecording() {
-            if (!recognition) return alert("瀏覽器不支援語音功能。");
+            if (!recognition) return alert("您的瀏覽器不支援語音辨識功能。");
             if (isRecording) stopRecording(); else startRecording();
         }
 
@@ -385,61 +359,14 @@
             initIcons();
         }
 
-        async function refineText() {
-            const studentText = document.getElementById('my-speech-output').value.trim();
-            if (!studentText) return alert("請先錄音或輸入文字。");
-            setLoading(true);
-            try {
-                const prompt = `你是一位充滿愛心的國小老師。請將下列學生的口說內容整理為兩篇優美的文章（題目：${topicPaths[currentTopic].name}）。
-                請回傳 JSON 格式：{"v1": "溫馨抒情版內容", "v2": "童趣生動版內容"}。
-                內容如下：${studentText}`;
-                const result = await callGemini(prompt, true);
-                aiResults = result;
-                document.getElementById('ai-v1').innerText = result.v1;
-                document.getElementById('ai-v2').innerText = result.v2;
-                document.getElementById('ai-modal').classList.remove('hidden');
-            } catch (e) {
-                alert("AI 調整失敗，請檢查 API Key 是否正確。");
-            } finally { setLoading(false); }
-        }
-
-        async function callGemini(prompt, isJson = false, retries = 0) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            const body = { 
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: isJson ? { responseMimeType: "application/json" } : {}
-            };
-            try {
-                const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-                if (!res.ok) throw new Error();
-                const data = await res.json();
-                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                return isJson ? JSON.parse(text) : text;
-            } catch (err) {
-                if (retries < 5) { await new Promise(r => setTimeout(r, Math.pow(2, retries) * 1000)); return callGemini(prompt, isJson, retries + 1); }
-                throw err;
-            }
-        }
-
-        function setLoading(l) {
-            isRefining = l;
-            const btn = document.getElementById('refine-btn'), icon = document.getElementById('refine-icon'), text = document.getElementById('refine-text');
-            if (l) { btn.disabled = true; icon.classList.add('loading-spin'); icon.setAttribute('data-lucide', 'loader-2'); text.innerText = "正在處理..."; }
-            else { btn.disabled = false; icon.classList.remove('loading-spin'); icon.setAttribute('data-lucide', 'wand-2'); text.innerText = "我來幫你調整"; }
-            initIcons();
-        }
-
-        function applyAI(v) { document.getElementById('my-speech-output').value = aiResults[v]; closeAI(); }
-        function closeAI() { document.getElementById('ai-modal').classList.add('hidden'); }
-
         function printResult() {
             const content = document.getElementById('my-speech-output').value;
-            if (!content.trim()) return alert("內容是空的喔！");
+            if (!content.trim()) return alert("口說練習區目前沒有內容喔！請先練習說話再列印。");
             document.getElementById('print-area').innerText = content;
             window.print();
         }
 
-        function resetApp() { stopRecording(); currentStep = 0; selections = { q1:'', q2:'', q3:'', q4:'' }; render(); }
+        function resetApp() { if(isRecording) stopRecording(); currentStep = 0; currentTemplateIndex = 0; selections = { q1:'', q2:'', q3:'', q4:'' }; render(); }
         window.onload = render;
     </script>
 </body>
